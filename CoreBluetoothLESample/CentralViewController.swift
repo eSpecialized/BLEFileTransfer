@@ -12,6 +12,7 @@ import os
 class CentralViewController: UIViewController {
     // UIViewController overrides, properties specific to this class, private helper methods, etc.
 
+    @IBOutlet var logView: UITextView!
     @IBOutlet var textView: UITextView!
 
     var centralManager: CBCentralManager!
@@ -30,13 +31,13 @@ class CentralViewController: UIViewController {
     override func viewDidLoad() {
         centralManager = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: true])
         super.viewDidLoad()
-
+        logView.text = "starting up\n"
     }
 	
     override func viewWillDisappear(_ animated: Bool) {
         // Don't keep it going while we're not showing.
         centralManager.stopScan()
-        os_log("Scanning stopped")
+        logit("Scanning stopped")
 
         data.removeAll(keepingCapacity: false)
         
@@ -44,6 +45,15 @@ class CentralViewController: UIViewController {
     }
 
     // MARK: - Helper Methods
+
+    func logit(_ logEntry: String) {
+        let oldText = logView.text ?? ""
+        logView.text = oldText + logEntry + "\n"
+
+        //scroll to the bottom of the view
+        let bottom = NSMakeRange(logView.text.count - 1, 1)
+        logView.scrollRangeToVisible(bottom)
+    }
 
     /*
      * We will first check if we are already connected to our counterpart
@@ -53,10 +63,10 @@ class CentralViewController: UIViewController {
         
         let connectedPeripherals: [CBPeripheral] = (centralManager.retrieveConnectedPeripherals(withServices: [TransferService.serviceUUID]))
         
-        os_log("Found connected Peripherals with transfer service: %@", connectedPeripherals)
+        logit("Found connected Peripherals with transfer service: \(connectedPeripherals)")
         
         if let connectedPeripheral = connectedPeripherals.last {
-            os_log("Connecting to peripheral %@", connectedPeripheral)
+            logit("Connecting to peripheral \(connectedPeripheral)")
 			self.discoveredPeripheral = connectedPeripheral
             centralManager.connect(connectedPeripheral, options: nil)
         } else {
@@ -109,7 +119,7 @@ class CentralViewController: UIViewController {
             let packetData = Data(bytes: &rawPacket, count: bytesToCopy)
 			
 			let stringFromData = String(data: packetData, encoding: .utf8)
-			os_log("Writing %d bytes: %s", bytesToCopy, String(describing: stringFromData))
+			logit("Writing \(bytesToCopy) bytes: \(String(describing: stringFromData))")
 			
             discoveredPeripheral.writeValue(packetData, for: transferCharacteristic, type: .withoutResponse)
             
@@ -139,14 +149,14 @@ extension CentralViewController: CBCentralManagerDelegate {
         switch central.state {
         case .poweredOn:
             // ... so start working with the peripheral
-            os_log("CBManager is powered on")
+            logit("CBManager is powered on")
             retrievePeripheral()
         case .poweredOff:
-            os_log("CBManager is not powered on")
+            logit("CBManager is not powered on")
             // In a real app, you'd deal with all the states accordingly
             return
         case .resetting:
-            os_log("CBManager is resetting")
+            logit("CBManager is resetting")
             // In a real app, you'd deal with all the states accordingly
             return
         case .unauthorized:
@@ -154,26 +164,26 @@ extension CentralViewController: CBCentralManagerDelegate {
             if #available(iOS 13.0, *) {
                 switch central.authorization {
                 case .denied:
-                    os_log("You are not authorized to use Bluetooth")
+                    logit("You are not authorized to use Bluetooth")
                 case .restricted:
-                    os_log("Bluetooth is restricted")
+                    logit("Bluetooth is restricted")
                 default:
-                    os_log("Unexpected authorization")
+                    logit("Unexpected authorization")
                 }
             } else {
                 // Fallback on earlier versions
             }
             return
         case .unknown:
-            os_log("CBManager state is unknown")
+            logit("CBManager state is unknown")
             // In a real app, you'd deal with all the states accordingly
             return
         case .unsupported:
-            os_log("Bluetooth is not supported on this device")
+            logit("Bluetooth is not supported on this device")
             // In a real app, you'd deal with all the states accordingly
             return
         @unknown default:
-            os_log("A previously unknown central manager state occurred")
+            logit("A previously unknown central manager state occurred")
             // In a real app, you'd deal with yet unknown cases that might occur in the future
             return
         }
@@ -191,11 +201,11 @@ extension CentralViewController: CBCentralManagerDelegate {
         // Change the minimum RSSI value depending on your app’s use case.
         guard RSSI.intValue >= -50
             else {
-                os_log("Discovered perhiperal not in expected range, at %d", RSSI.intValue)
+                logit("Discovered perhiperal not in expected range, at \(RSSI.intValue)")
                 return
         }
         
-        os_log("Discovered %s at %d", String(describing: peripheral.name), RSSI.intValue)
+        logit("Discovered \(String(describing: peripheral.name)) at \(RSSI.intValue)")
         
         // Device is in range - have we already seen it?
         if discoveredPeripheral != peripheral {
@@ -204,7 +214,7 @@ extension CentralViewController: CBCentralManagerDelegate {
             discoveredPeripheral = peripheral
             
             // And finally, connect to the peripheral.
-            os_log("Connecting to perhiperal %@", peripheral)
+            logit("Connecting to perhiperal \(peripheral)")
             centralManager.connect(peripheral, options: nil)
         }
     }
@@ -213,7 +223,7 @@ extension CentralViewController: CBCentralManagerDelegate {
      *  If the connection fails for whatever reason, we need to deal with it.
      */
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        os_log("Failed to connect to %@. %s", peripheral, String(describing: error))
+        logit("Failed to connect to \(peripheral). String(describing: error)")
         cleanup()
     }
     
@@ -221,11 +231,11 @@ extension CentralViewController: CBCentralManagerDelegate {
      *  We've connected to the peripheral, now we need to discover the services and characteristics to find the 'transfer' characteristic.
      */
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        os_log("Peripheral Connected")
+        logit("Peripheral Connected")
         
         // Stop scanning
         centralManager.stopScan()
-        os_log("Scanning stopped")
+        logit("Scanning stopped")
         
         // set iteration info
         connectionIterationsComplete += 1
@@ -245,14 +255,14 @@ extension CentralViewController: CBCentralManagerDelegate {
      *  Once the disconnection happens, we need to clean up our local copy of the peripheral
      */
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        os_log("Perhiperal Disconnected")
+        logit("Perhiperal Disconnected")
         discoveredPeripheral = nil
         
         // We're disconnected, so start scanning again
         if connectionIterationsComplete < defaultIterations {
             retrievePeripheral()
         } else {
-            os_log("Connection iterations completed")
+            logit("Connection iterations completed")
         }
     }
 
@@ -267,7 +277,7 @@ extension CentralViewController: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
         
         for service in invalidatedServices where service.uuid == TransferService.serviceUUID {
-            os_log("Transfer service is invalidated - rediscover services")
+            logit("Transfer service is invalidated - rediscover services")
             peripheral.discoverServices([TransferService.serviceUUID])
         }
     }
@@ -277,7 +287,7 @@ extension CentralViewController: CBPeripheralDelegate {
      */
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error = error {
-            os_log("Error discovering services: %s", error.localizedDescription)
+            logit("Error discovering services:  \(error.localizedDescription)")
             cleanup()
             return
         }
@@ -298,7 +308,7 @@ extension CentralViewController: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         // Deal with errors (if any).
         if let error = error {
-            os_log("Error discovering characteristics: %s", error.localizedDescription)
+            logit("Error discovering characteristics: \(error.localizedDescription)")
             cleanup()
             return
         }
@@ -320,7 +330,7 @@ extension CentralViewController: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         // Deal with errors (if any)
         if let error = error {
-            os_log("Error discovering characteristics: %s", error.localizedDescription)
+            logit("Error discovering characteristics: \(error.localizedDescription)")
             cleanup()
             return
         }
@@ -328,7 +338,7 @@ extension CentralViewController: CBPeripheralDelegate {
         guard let characteristicData = characteristic.value,
             let stringFromData = String(data: characteristicData, encoding: .utf8) else { return }
         
-        os_log("Received %d bytes: %s", characteristicData.count, stringFromData)
+        logit("Received \(characteristicData.count) bytes: \(stringFromData)")
         
         // Have we received the end-of-message token?
         if stringFromData == "EOM" {
@@ -353,7 +363,7 @@ extension CentralViewController: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         // Deal with errors (if any)
         if let error = error {
-            os_log("Error changing notification state: %s", error.localizedDescription)
+            logit("Error changing notification state: \(error.localizedDescription)")
             return
         }
         
@@ -362,10 +372,10 @@ extension CentralViewController: CBPeripheralDelegate {
         
         if characteristic.isNotifying {
             // Notification has started
-            os_log("Notification began on %@", characteristic)
+            logit("Notification began on \(characteristic)")
         } else {
             // Notification has stopped, so disconnect from the peripheral
-            os_log("Notification stopped on %@. Disconnecting", characteristic)
+            logit("Notification stopped on \(characteristic). Disconnecting")
             cleanup()
         }
         
@@ -375,7 +385,7 @@ extension CentralViewController: CBPeripheralDelegate {
      *  This is called when peripheral is ready to accept more data when using write without response
      */
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
-        os_log("Peripheral is ready, send data")
+        logit("Peripheral is ready, send data")
         writeData()
     }
     

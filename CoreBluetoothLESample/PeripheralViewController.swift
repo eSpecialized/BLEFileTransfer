@@ -11,9 +11,18 @@ import os
 
 class PeripheralViewController: UIViewController {
 
+    let advertisingOnString = "advertising: ON"
+    let advertisingOffString = "advertising: OFF"
+
+    @IBOutlet var logView: UITextView!
     @IBOutlet var textView: UITextView!
+
+    #if os(tvOS)
+    @IBOutlet var advertisingButton: UIButton!
+    #else
     @IBOutlet var advertisingSwitch: UISwitch!
-    
+    #endif
+
     var peripheralManager: CBPeripheralManager!
 
     var transferCharacteristic: CBMutableCharacteristic?
@@ -24,9 +33,21 @@ class PeripheralViewController: UIViewController {
     // MARK: - View Lifecycle
     
     override func viewDidLoad() {
+        #if os(tvOS)
+        peripheralManager = CBPeripheralManager()
+        peripheralManager.delegate = self
+        #else
         peripheralManager = CBPeripheralManager(delegate: self, queue: nil, options: [CBPeripheralManagerOptionShowPowerAlertKey: true])
+        peripheralManager.delegate = self
+        #endif
+
         super.viewDidLoad()
 
+        #if os(tvOS)
+        logView.text = "Not Supported on tvOS Yet"
+        #else
+        logView.text = "Starting up"
+        #endif
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -40,14 +61,37 @@ class PeripheralViewController: UIViewController {
 
     @IBAction func switchChanged(_ sender: Any) {
         // All we advertise is our service's UUID.
+        #if !os(tvOS)
         if advertisingSwitch.isOn {
             peripheralManager.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [TransferService.serviceUUID]])
         } else {
             peripheralManager.stopAdvertising()
         }
+        #endif
+    }
+
+    @IBAction func buttonTapped(_ sender: Any) {
+        #if os(tvOS)
+        if advertisingButton.titleLabel?.text == advertisingOffString {
+            advertisingButton.titleLabel?.text = advertisingOnString
+            peripheralManager.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [TransferService.serviceUUID]])
+        } else {
+            advertisingButton.titleLabel?.text = advertisingOffString
+            peripheralManager.stopAdvertising()
+        }
+        #endif
     }
 
     // MARK: - Helper Methods
+
+    func logit(_ logEntry: String) {
+        let oldText = logView.text ?? ""
+        logView.text = oldText + logEntry + "\n"
+        
+        //scroll to the bottom of the view
+        let bottom = NSMakeRange(logView.text.count - 1, 1)
+        logView.scrollRangeToVisible(bottom)
+    }
 
     /*
      *  Sends the next amount of data to the connected central
@@ -68,7 +112,7 @@ class PeripheralViewController: UIViewController {
             if didSend {
                 // It did, so mark it as sent
                 PeripheralViewController.sendingEOM = false
-                os_log("Sent: EOM")
+                logit("Sent: EOM")
             }
             // It didn't send, so we'll exit and wait for peripheralManagerIsReadyToUpdateSubscribers to call sendData again
             return
@@ -103,7 +147,7 @@ class PeripheralViewController: UIViewController {
             }
             
             let stringFromData = String(data: chunk, encoding: .utf8)
-            os_log("Sent %d bytes: %s", chunk.count, String(describing: stringFromData))
+            logit("Sent \(chunk.count) bytes: \(String(describing: stringFromData))")
             
             // It did send, so update our index
             sendDataIndex += amountToSend
@@ -121,7 +165,7 @@ class PeripheralViewController: UIViewController {
                 if eomSent {
                     // It sent; we're all done
                     PeripheralViewController.sendingEOM = false
-                    os_log("Sent: EOM")
+                    logit("Sent: EOM")
                 }
                 return
             }
@@ -129,10 +173,16 @@ class PeripheralViewController: UIViewController {
     }
 
     private func setupPeripheral() {
-        
         // Build our service.
-        
         // Start with the CBMutableCharacteristic.
+        #if os(tvOS)
+        //FIXME: Cannot call init on these two items.
+        //let transferCharacteristic = CBMutableCharacteristic()
+
+        // Create a service from the characteristic.
+        //let transferService = CBMutableService()
+
+        #else
         let transferCharacteristic = CBMutableCharacteristic(type: TransferService.characteristicUUID,
                                                          properties: [.notify, .writeWithoutResponse],
                                                          value: nil,
@@ -140,7 +190,7 @@ class PeripheralViewController: UIViewController {
         
         // Create a service from the characteristic.
         let transferService = CBMutableService(type: TransferService.serviceUUID, primary: true)
-        
+
         // Add the characteristic to the service.
         transferService.characteristics = [transferCharacteristic]
         
@@ -149,6 +199,7 @@ class PeripheralViewController: UIViewController {
         
         // Save the characteristic for later.
         self.transferCharacteristic = transferCharacteristic
+        #endif
 
     }
 }
@@ -165,20 +216,23 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
      *  your app is allowed to use bluetooth
      */
     internal func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
-        
+        #if os(tvOS)
+
+        #else
         advertisingSwitch.isEnabled = peripheral.state == .poweredOn
-        
+        #endif
+
         switch peripheral.state {
         case .poweredOn:
             // ... so start working with the peripheral
-            os_log("CBManager is powered on")
+            logit("CBManager is powered on")
             setupPeripheral()
         case .poweredOff:
-            os_log("CBManager is not powered on")
+            logit("CBManager is not powered on")
             // In a real app, you'd deal with all the states accordingly
             return
         case .resetting:
-            os_log("CBManager is resetting")
+            logit("CBManager is resetting")
             // In a real app, you'd deal with all the states accordingly
             return
         case .unauthorized:
@@ -186,26 +240,26 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
             if #available(iOS 13.0, *) {
                 switch peripheral.authorization {
                 case .denied:
-                    os_log("You are not authorized to use Bluetooth")
+                    logit("You are not authorized to use Bluetooth")
                 case .restricted:
-                    os_log("Bluetooth is restricted")
+                    logit("Bluetooth is restricted")
                 default:
-                    os_log("Unexpected authorization")
+                    logit("Unexpected authorization")
                 }
             } else {
                 // Fallback on earlier versions
             }
             return
         case .unknown:
-            os_log("CBManager state is unknown")
+            logit("CBManager state is unknown")
             // In a real app, you'd deal with all the states accordingly
             return
         case .unsupported:
-            os_log("Bluetooth is not supported on this device")
+            logit("Bluetooth is not supported on this device")
             // In a real app, you'd deal with all the states accordingly
             return
         @unknown default:
-            os_log("A previously unknown peripheral manager state occurred")
+            logit("A previously unknown peripheral manager state occurred")
             // In a real app, you'd deal with yet unknown cases that might occur in the future
             return
         }
@@ -215,7 +269,7 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
      *  Catch when someone subscribes to our characteristic, then start sending them data
      */
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
-        os_log("Central subscribed to characteristic")
+        logit("Central subscribed to characteristic")
         
         // Get the data
         dataToSend = textView.text.data(using: .utf8)!
@@ -234,7 +288,7 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
      *  Recognize when the central unsubscribes
      */
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
-        os_log("Central unsubscribed from characteristic")
+        logit("Central unsubscribed from characteristic")
         connectedCentral = nil
     }
     
@@ -257,8 +311,7 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
                     continue
             }
             
-            os_log("Received write request of %d bytes: %s", requestValue.count, stringFromData)
-            self.textView.text = stringFromData
+            logit("Received write request of \(requestValue.count) bytes: \(stringFromData)")
         }
     }
 }
@@ -271,10 +324,17 @@ extension PeripheralViewController: UITextViewDelegate {
      */
     func textViewDidChange(_ textView: UITextView) {
         // If we're already advertising, stop
+        #if os(tvOS)
+        if advertisingButton.titleLabel?.text == advertisingOnString {
+            advertisingButton.titleLabel?.text = advertisingOffString
+            peripheralManager.stopAdvertising()
+        }
+        #else
         if advertisingSwitch.isOn {
             advertisingSwitch.isOn = false
             peripheralManager.stopAdvertising()
         }
+        #endif
     }
     
     /*
