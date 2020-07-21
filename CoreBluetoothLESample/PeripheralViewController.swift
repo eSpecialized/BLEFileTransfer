@@ -14,14 +14,18 @@ class PeripheralViewController: UIViewController {
     let advertisingOnString = "advertising: ON"
     let advertisingOffString = "advertising: OFF"
 
+    @IBOutlet weak var progressView: UIProgressView!
     @IBOutlet var logView: UITextView!
     @IBOutlet var textView: UITextView!
+
+    @IBOutlet weak var imageView: UIImageView!
 
     #if os(tvOS)
     @IBOutlet var advertisingButton: UIButton!
     #else
     @IBOutlet var advertisingSwitch: UISwitch!
     #endif
+    @IBOutlet weak var uploadButton: UIButton!
 
     var peripheralManager: CBPeripheralManager!
 
@@ -47,6 +51,7 @@ class PeripheralViewController: UIViewController {
         logView.text = "Not Supported on tvOS Yet\n"
         #else
         logView.text = "Starting up\n"
+        progressView.isHidden = true
         #endif
     }
     
@@ -82,6 +87,23 @@ class PeripheralViewController: UIViewController {
         #endif
     }
 
+
+    @IBAction func showImagePicker(_ sender: Any) {
+        #if !os(tvOS)
+        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerController.SourceType.photoLibrary) {
+            let imagePickerController = UIImagePickerController()
+            imagePickerController.delegate = self
+            imagePickerController.mediaTypes = ["public.image"]
+            imagePickerController.allowsEditing = true
+            imagePickerController.sourceType = .photoLibrary
+
+            navigationController?.present(imagePickerController, animated: true, completion: {
+                self.logit("Showing Image Picker.")
+            })
+        }
+        #endif
+    }
+
     // MARK: - Helper Methods
 
     private func logit(_ logEntry: String) {
@@ -91,6 +113,8 @@ class PeripheralViewController: UIViewController {
         //scroll to the bottom of the view
         let bottom = NSMakeRange(logView.text.count - 1, 1)
         logView.scrollRangeToVisible(bottom)
+
+        print(logit)
     }
 
     /*
@@ -127,6 +151,7 @@ class PeripheralViewController: UIViewController {
         
         // There's data left, so send until the callback fails, or we're done.
         var didSend = true
+
         while didSend {
             
             // Work out how big it should be
@@ -146,9 +171,12 @@ class PeripheralViewController: UIViewController {
                 return
             }
             
-            let stringFromData = String(data: chunk, encoding: .utf8)
-            logit("Sent \(chunk.count) bytes: \(String(describing: stringFromData))")
-            
+            //let stringFromData = String(data: chunk, encoding: .utf8)
+            //logit("Sent \(chunk.count)")// bytes: \(String(describing: stringFromData))")
+            //print("Sent \(chunk.count)")// bytes: \(String(describing: stringFromData))")
+            let totalPercent = Float(sendDataIndex) / Float(dataToSend.count)
+            progressView.progress = totalPercent
+
             // It did send, so update our index
             sendDataIndex += amountToSend
             // Was it the last one?
@@ -167,6 +195,8 @@ class PeripheralViewController: UIViewController {
                     PeripheralViewController.sendingEOM = false
                     logit("Sent: EOM")
                 }
+
+                logit("Sent \(dataToSend.count) bytes Completed")
                 return
             }
         }
@@ -201,6 +231,34 @@ class PeripheralViewController: UIViewController {
         self.transferCharacteristic = transferCharacteristic
         #endif
 
+    }
+
+    private func pickerDidSelect(image: UIImage?, fileName: String?) {
+        textView.resignFirstResponder()
+        logView.resignFirstResponder()
+
+        guard
+            let fileHandle = fileName,
+            let imageHandle = image,
+            let endData = "\n=============== END ============\n".data(using: .utf8),
+            let imageData = imageHandle.jpegData(compressionQuality: 0.85),
+            let fileData = "===============|\(fileHandle)|\(imageData.count)|============\n".data(using: .utf8)
+        else {
+            logit("User cancelled Image Picking")
+            return
+        }
+
+        var mutableData = Data()
+
+        mutableData.append(fileData)
+        mutableData.append(imageData.base64EncodedData(options: [.endLineWithLineFeed, .lineLength76Characters]))
+        mutableData.append(endData)
+
+        dataToSend = mutableData
+        logit("Send \(dataToSend.count) bytes, watch the progress bar for completion percentage")
+
+        progressView.isHidden = false
+        progressView.progress = 0
     }
 }
 
@@ -271,8 +329,10 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
         logit("Central subscribed to characteristic")
         
-        // Get the data
-        dataToSend = textView.text.data(using: .utf8)!
+        // Get the data, only if an image hasn't been encoded to send.
+        if dataToSend.isEmpty {
+            dataToSend = textView.text.data(using: .utf8)!
+        }
         
         // Reset the index
         sendDataIndex = 0
@@ -354,6 +414,29 @@ extension PeripheralViewController: UITextViewDelegate {
         textView.resignFirstResponder()
         navigationItem.rightBarButtonItem = nil
     }
-    
 }
 
+#if !os(tvOS)
+extension PeripheralViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        navigationController?.dismiss(animated: true, completion: nil)
+    }
+
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        navigationController?.dismiss(animated: true, completion: nil)
+        print(info)
+        guard let image = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage, let fileURL = info[.imageURL] as? URL else {
+            logit("Failed to retrieve an image")
+            return
+        }
+
+        if imageView != nil {
+            imageView.isHidden = false
+            imageView.image = image
+        }
+
+        let fileName = fileURL.lastPathComponent
+        pickerDidSelect(image: image, fileName: fileName)
+    }
+}
+#endif

@@ -90,17 +90,30 @@
                                 <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
                                 <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
                             </textView>
+                            <imageView hidden="YES" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="yrs-nc-5qT">
+                                <rect key="frame" x="118" y="522" width="1696" height="498"/>
+                            </imageView>
+                            <progressView hidden="YES" opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" progress="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="KBO-io-5c0">
+                                <rect key="frame" x="106" y="504" width="1708" height="10"/>
+                            </progressView>
                         </subviews>
                         <constraints>
                             <constraint firstItem="W0O-9e-gsJ" firstAttribute="top" secondItem="Clh-q4-bUp" secondAttribute="bottom" constant="8" id="6HR-Pq-srh"/>
+                            <constraint firstItem="yrs-nc-5qT" firstAttribute="leading" secondItem="uZL-BQ-ar2" secondAttribute="leading" constant="28" id="9hg-AI-C4T"/>
+                            <constraint firstItem="uZL-BQ-ar2" firstAttribute="trailing" secondItem="KBO-io-5c0" secondAttribute="trailing" constant="16" id="GIy-AZ-hva"/>
+                            <constraint firstItem="KBO-io-5c0" firstAttribute="top" secondItem="Cg0-qj-wQv" secondAttribute="bottom" constant="299" id="GJf-3y-JYA"/>
                             <constraint firstItem="JAw-zx-Sij" firstAttribute="centerX" secondItem="WAS-k4-d2k" secondAttribute="centerX" id="I6a-I6-8md"/>
                             <constraint firstItem="W0O-9e-gsJ" firstAttribute="top" secondItem="Clh-q4-bUp" secondAttribute="bottom" constant="8" id="I72-CY-BPB"/>
+                            <constraint firstItem="yrs-nc-5qT" firstAttribute="top" secondItem="Clh-q4-bUp" secondAttribute="bottom" constant="8" id="QfW-xf-QmB"/>
                             <constraint firstItem="uZL-BQ-ar2" firstAttribute="trailing" secondItem="W0O-9e-gsJ" secondAttribute="trailing" constant="28" id="Qto-ls-Bh2"/>
+                            <constraint firstItem="uZL-BQ-ar2" firstAttribute="trailing" secondItem="yrs-nc-5qT" secondAttribute="trailing" constant="16" id="RfC-Ms-JkN"/>
                             <constraint firstItem="0Xi-Ju-tTt" firstAttribute="top" secondItem="W0O-9e-gsJ" secondAttribute="bottom" id="UP1-m9-jKR"/>
                             <constraint firstItem="Clh-q4-bUp" firstAttribute="top" secondItem="JAw-zx-Sij" secondAttribute="bottom" constant="19" id="cMJ-Tg-ASr"/>
+                            <constraint firstItem="0Xi-Ju-tTt" firstAttribute="top" secondItem="yrs-nc-5qT" secondAttribute="bottom" id="lZ5-kP-oUR"/>
                             <constraint firstItem="W0O-9e-gsJ" firstAttribute="leading" secondItem="uZL-BQ-ar2" secondAttribute="leading" constant="28" id="lh6-ln-UvM"/>
                             <constraint firstItem="Clh-q4-bUp" firstAttribute="leading" secondItem="uZL-BQ-ar2" secondAttribute="leading" constant="16" id="pfU-8g-YZR"/>
                             <constraint firstItem="W0O-9e-gsJ" firstAttribute="top" secondItem="Clh-q4-bUp" secondAttribute="bottom" constant="8" id="r0S-ea-Yjb"/>
+                            <constraint firstItem="KBO-io-5c0" firstAttribute="leading" secondItem="uZL-BQ-ar2" secondAttribute="leading" constant="16" id="rwV-jl-Ydd"/>
                             <constraint firstItem="Clh-q4-bUp" firstAttribute="top" secondItem="JAw-zx-Sij" secondAttribute="bottom" constant="19" id="uCq-hu-4H8"/>
                             <constraint firstItem="uZL-BQ-ar2" firstAttribute="trailing" secondItem="Clh-q4-bUp" secondAttribute="trailing" constant="16" id="xum-pY-Syr"/>
                         </constraints>
@@ -108,7 +121,9 @@
                     </view>
                     <navigationItem key="navigationItem" id="8zv-z3-lAb"/>
                     <connections>
+                        <outlet property="imageView" destination="yrs-nc-5qT" id="sHg-SP-enY"/>
                         <outlet property="logView" destination="Clh-q4-bUp" id="4Yb-fy-SnP"/>
+                        <outlet property="progressView" destination="KBO-io-5c0" id="hXm-Wm-dTG"/>
                         <outlet property="textView" destination="W0O-9e-gsJ" id="pIf-FE-F94"/>
                     </connections>
                 </viewController>

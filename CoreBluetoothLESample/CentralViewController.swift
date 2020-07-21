@@ -14,6 +14,11 @@ class CentralViewController: UIViewController {
 
     @IBOutlet var logView: UITextView!
     @IBOutlet var textView: UITextView!
+    @IBOutlet weak var imageView: UIImageView!
+    @IBOutlet weak var progressView: UIProgressView!
+
+    var expectedBytes = 0
+    var fileName = ""
 
     var centralManager: CBCentralManager!
 
@@ -337,23 +342,34 @@ extension CentralViewController: CBPeripheralDelegate {
         
         guard let characteristicData = characteristic.value,
             let stringFromData = String(data: characteristicData, encoding: .utf8) else { return }
-        
-        logit("Received \(characteristicData.count) bytes: \(stringFromData)")
-        
+
+        if fileName.isEmpty {
+            logit("Received \(characteristicData.count) bytes: \(stringFromData)")
+        }
+
         // Have we received the end-of-message token?
         if stringFromData == "EOM" {
             // End-of-message case: show the data.
             // Dispatch the text view update to the main queue for updating the UI, because
             // we don't know which thread this method will be called back on.
             DispatchQueue.main.async() {
-                self.textView.text = String(data: self.data, encoding: .utf8)
+                self.processData()
             }
             
-            // Write test data
-            writeData()
+            // Write test data, only if we were not capturing a file. IE don't send the same info back to the sender.
+            if fileName.isEmpty {
+                writeData()
+            }
         } else {
             // Otherwise, just append the data to what we have previously received.
+            if data.count < 256 {
+                captureHeader(from: characteristicData)
+            }
+
             data.append(characteristicData)
+
+            let percentage = Float(data.count) / Float(expectedBytes)
+            progressView.progress = percentage
         }
     }
 
@@ -388,5 +404,74 @@ extension CentralViewController: CBPeripheralDelegate {
         logit("Peripheral is ready, send data")
         writeData()
     }
-    
+
+
+    func processData() {
+        guard let dataAsString = String(data: data, encoding: .utf8) else { logit("Unable to obtain string from Sent Data"); return }
+
+        var stringComponents = dataAsString.split(separator: "\n")
+
+        guard stringComponents.count > 0 else {
+            self.textView.text = dataAsString
+            return
+        }
+
+        if !fileName.isEmpty {
+            //we have a file/image etc.
+            stringComponents.remove(at: 0)
+            stringComponents.removeLast()
+
+            let joinedComponents = stringComponents.joined(separator: "\n")
+            if let decodedData = Data(base64Encoded: joinedComponents, options: .ignoreUnknownCharacters) {
+                let image = UIImage(data: decodedData)
+                logit("Image info captured \(image.debugDescription)")
+
+                //show the image if able to.
+                if imageView != nil {
+                    imageView.isHidden = false
+                    imageView.image = image
+                }
+            }
+        } else {
+            //just display the string
+            self.textView.text = String(data: self.data, encoding: .utf8)
+        }
+    }
+
+    func captureHeader(from receivedData: Data) {
+        guard let firstString = String(data: receivedData, encoding: .utf8) else { return }
+
+        guard firstString.hasPrefix("====") else { return }
+
+        if firstString.contains("|") {
+            // I realize I could split this on commas. But lets use regex anyway.
+            let filteredString = firstString.replacingOccurrences(of: "|", with: ",")
+
+            do {
+                let regularExpression = try NSRegularExpression(pattern: ",(.+),(.+),", options: .allowCommentsAndWhitespace)
+                if
+                    let result = regularExpression.firstMatch(in: filteredString, options: [], range: NSRange(location: 0, length: filteredString.count)),
+                    result.numberOfRanges > 1
+                {
+                    let capture = result.range(at: 1)
+                    let startIndex = filteredString.index(filteredString.startIndex, offsetBy: capture.location)
+                    let endIndex = filteredString.index(filteredString.startIndex, offsetBy: capture.upperBound)
+                    fileName = String(filteredString[startIndex..<endIndex])
+                    logit("Captured [\(fileName)]")
+
+                    let capturedSize = result.range(at: 2)
+                    let startIndex2 = filteredString.index(filteredString.startIndex, offsetBy: capturedSize.location)
+                    let endIndex2 = filteredString.index(filteredString.startIndex, offsetBy: capturedSize.upperBound)
+                    let newString2 = String(filteredString[startIndex2..<endIndex2])
+                    expectedBytes = Int(newString2) ?? 0
+                    logit("[\(expectedBytes) bytes expected]")
+
+                    progressView.isHidden = false
+                }
+
+            } catch {
+                print(error)
+            }
+        }
+    }
 }
