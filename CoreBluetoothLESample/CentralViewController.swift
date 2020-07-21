@@ -340,15 +340,21 @@ extension CentralViewController: CBPeripheralDelegate {
             return
         }
         
-        guard let characteristicData = characteristic.value,
-            let stringFromData = String(data: characteristicData, encoding: .utf8) else { return }
+        guard let characteristicData = characteristic.value else { return }
+
+        let stringFromData = String(data: characteristicData, encoding: .utf8) ?? ""
 
         if fileName.isEmpty {
             logit("Received \(characteristicData.count) bytes: \(stringFromData)")
         }
 
+        if stringFromData.hasPrefix("====") {
+            print("captureHeader")
+            captureHeader(from: characteristicData)
+        }
         // Have we received the end-of-message token?
-        if stringFromData == "EOM" {
+        else if stringFromData == "EOM" {
+            print("EOM received")
             // End-of-message case: show the data.
             // Dispatch the text view update to the main queue for updating the UI, because
             // we don't know which thread this method will be called back on.
@@ -361,11 +367,8 @@ extension CentralViewController: CBPeripheralDelegate {
                 writeData()
             }
         } else {
+            print(".")
             // Otherwise, just append the data to what we have previously received.
-            if data.count < 256 {
-                captureHeader(from: characteristicData)
-            }
-
             data.append(characteristicData)
 
             let percentage = Float(data.count) / Float(expectedBytes)
@@ -407,31 +410,19 @@ extension CentralViewController: CBPeripheralDelegate {
 
 
     func processData() {
-        guard let dataAsString = String(data: data, encoding: .utf8) else { logit("Unable to obtain string from Sent Data"); return }
-
-        var stringComponents = dataAsString.split(separator: "\n")
-
-        guard stringComponents.count > 0 else {
-            self.textView.text = dataAsString
-            return
-        }
-
         if !fileName.isEmpty {
-            //we have a file/image etc.
-            stringComponents.remove(at: 0)
-            stringComponents.removeLast()
+            let image = UIImage(data: data)
+            logit("Image info captured \(image.debugDescription)")
 
-            let joinedComponents = stringComponents.joined(separator: "\n")
-            if let decodedData = Data(base64Encoded: joinedComponents, options: .ignoreUnknownCharacters) {
-                let image = UIImage(data: decodedData)
-                logit("Image info captured \(image.debugDescription)")
-
-                //show the image if able to.
-                if imageView != nil {
-                    imageView.isHidden = false
-                    imageView.image = image
-                }
+            //show the image if able to.
+            if imageView != nil {
+                imageView.isHidden = false
+                imageView.image = image
             }
+
+            //reset for next set of data etc.
+            data = Data()
+            fileName = ""
         } else {
             //just display the string
             self.textView.text = String(data: self.data, encoding: .utf8)

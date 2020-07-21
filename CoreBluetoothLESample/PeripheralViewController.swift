@@ -32,6 +32,7 @@ class PeripheralViewController: UIViewController {
     var transferCharacteristic: CBMutableCharacteristic?
     var connectedCentral: CBCentral?
     var dataToSend = Data()
+    var headerDataToSend = Data()
     var sendDataIndex: Int = 0
     
     // MARK: - View Lifecycle
@@ -50,7 +51,7 @@ class PeripheralViewController: UIViewController {
         #if os(tvOS)
         logView.text = "Not Supported on tvOS Yet\n"
         #else
-        logView.text = "Starting up\n"
+        logView.text = "Starting up\n Once you have typed text, or selected a photo to upload, begin advertising.\n"
         progressView.isHidden = true
         #endif
     }
@@ -151,6 +152,16 @@ class PeripheralViewController: UIViewController {
         
         // There's data left, so send until the callback fails, or we're done.
         var didSend = true
+        //send header first if it exists
+        if headerDataToSend.count > 0 {
+            didSend = peripheralManager.updateValue(headerDataToSend, for: transferCharacteristic, onSubscribedCentrals: nil)
+
+            if !didSend {
+                return
+            }
+
+            headerDataToSend = Data()
+        }
 
         while didSend {
             
@@ -170,10 +181,7 @@ class PeripheralViewController: UIViewController {
             if !didSend {
                 return
             }
-            
-            //let stringFromData = String(data: chunk, encoding: .utf8)
-            //logit("Sent \(chunk.count)")// bytes: \(String(describing: stringFromData))")
-            //print("Sent \(chunk.count)")// bytes: \(String(describing: stringFromData))")
+
             let totalPercent = Float(sendDataIndex) / Float(dataToSend.count)
             progressView.progress = totalPercent
 
@@ -240,25 +248,27 @@ class PeripheralViewController: UIViewController {
         guard
             let fileHandle = fileName,
             let imageHandle = image,
-            let endData = "\n=============== END ============\n".data(using: .utf8),
             let imageData = imageHandle.jpegData(compressionQuality: 0.85),
-            let fileData = "===============|\(fileHandle)|\(imageData.count)|============\n".data(using: .utf8)
+            let headerData = "====|\(fileHandle)|\(imageData.count)|====".data(using: .utf8)
         else {
             logit("User cancelled Image Picking")
             return
         }
 
-        var mutableData = Data()
-
-        mutableData.append(fileData)
-        mutableData.append(imageData.base64EncodedData(options: [.endLineWithLineFeed, .lineLength76Characters]))
-        mutableData.append(endData)
-
-        dataToSend = mutableData
+        // trying to send just the data, no encoding. The header and EOM send separately this way. This avoids the costly decoding, splitting
+        //  and more processing to get the image presentable. Besides, BLE has CRC checking built in.
+        dataToSend = imageData
+        headerDataToSend = headerData
         logit("Send \(dataToSend.count) bytes, watch the progress bar for completion percentage")
 
         progressView.isHidden = false
         progressView.progress = 0
+
+        //if someone is already connected to us. Send an image!
+        if connectedCentral != nil {
+            sendDataIndex = 0
+            sendData()
+        }
     }
 }
 
@@ -339,6 +349,14 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
         
         // save central
         connectedCentral = central
+
+        //stop advertising if we were already advertising.
+        peripheralManager.stopAdvertising()
+        #if os(iOS)
+            if advertisingSwitch.isOn {
+                advertisingSwitch.setOn(false, animated: true)
+            }
+        #endif
         
         // Start sending
         sendData()
