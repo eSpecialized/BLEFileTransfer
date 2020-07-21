@@ -12,15 +12,30 @@ import os
 class CentralViewController: UIViewController {
     // UIViewController overrides, properties specific to this class, private helper methods, etc.
 
+    //https://www.bluetooth.com/specifications/gatt/characteristics/
+    //SPS named device is the INKBird sensor. but making heads or tails of the data there is difficult.
+    let temperatureDeviceCharacteristics = [
+        CBUUID(string: "0x2A1E"),
+        CBUUID(string: "0x2A3C"),
+        CBUUID(string: "0x2A6E"),
+        CBUUID(string: "0x2A1F"),
+        CBUUID(string: "0x2A20"),
+        CBUUID(string: "0x2A1C"),
+        CBUUID(string: "0x2A1D")
+    ]
+
     @IBOutlet var logView: UITextView!
     @IBOutlet var textView: UITextView!
 
     var centralManager: CBCentralManager!
 
-    var discoveredPeripheral: CBPeripheral?
+    var discoveredOutOfRangePeripherals = [CBPeripheral]()
+    var discoveredPeripherals = [CBPeripheral]()
     var transferCharacteristic: CBCharacteristic?
     var writeIterationsComplete = 0
     var connectionIterationsComplete = 0
+
+    var connectedPeripheral: CBPeripheral?
     
     let defaultIterations = 5     // change this value based on test usecase
     
@@ -29,11 +44,17 @@ class CentralViewController: UIViewController {
     // MARK: - view lifecycle
     
     override func viewDidLoad() {
-        centralManager = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: true])
         super.viewDidLoad()
         logView.text = "starting up\n"
     }
-	
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        centralManager = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: true])
+
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Stop Scan", style: .plain, target: self, action: #selector(stopScanning))
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
         // Don't keep it going while we're not showing.
         centralManager.stopScan()
@@ -46,6 +67,11 @@ class CentralViewController: UIViewController {
 
     // MARK: - Helper Methods
 
+    @objc
+    func stopScanning() {
+        centralManager.stopScan()
+    }
+
     private func logit(_ logEntry: String) {
         let oldText = logView.text ?? ""
         logView.text = oldText + logEntry + "\n"
@@ -53,6 +79,8 @@ class CentralViewController: UIViewController {
         //scroll to the bottom of the view
         let bottom = NSMakeRange(logView.text.count - 1, 1)
         logView.scrollRangeToVisible(bottom)
+
+        os_log("%s", logEntry)
     }
 
     /*
@@ -61,17 +89,17 @@ class CentralViewController: UIViewController {
      */
     private func retrievePeripheral() {
         
-        let connectedPeripherals: [CBPeripheral] = (centralManager.retrieveConnectedPeripherals(withServices: [TransferService.serviceUUID]))
+        let connectedPeripherals: [CBPeripheral] = (centralManager.retrieveConnectedPeripherals(withServices: [])) //TransferService.serviceUUID
         
-        logit("Found connected Peripherals with transfer service: \(connectedPeripherals)")
+        logit("Found connected Peripherals with service: \(connectedPeripherals)")
         
-        if let connectedPeripheral = connectedPeripherals.last {
-            logit("Connecting to peripheral \(connectedPeripheral)")
-			self.discoveredPeripheral = connectedPeripheral
-            centralManager.connect(connectedPeripheral, options: nil)
+        if let peripheral = connectedPeripherals.last {
+            logit("Connecting to peripheral \(peripheral)")
+            self.discoveredPeripherals.append(peripheral)
+            centralManager.connect(peripheral, options: nil)
         } else {
             // We were not connected to our counterpart, so start scanning
-            centralManager.scanForPeripherals(withServices: [TransferService.serviceUUID],
+            centralManager.scanForPeripherals(withServices: [], //TransferService.serviceUUID
                                                options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
         }
     }
@@ -83,20 +111,26 @@ class CentralViewController: UIViewController {
      */
     private func cleanup() {
         // Don't do anything if we're not connected
-        guard let discoveredPeripheral = discoveredPeripheral,
-            case .connected = discoveredPeripheral.state else { return }
-        
-        for service in (discoveredPeripheral.services ?? [] as [CBService]) {
-            for characteristic in (service.characteristics ?? [] as [CBCharacteristic]) {
-                if characteristic.uuid == TransferService.characteristicUUID && characteristic.isNotifying {
-                    // It is notifying, so unsubscribe
-                    self.discoveredPeripheral?.setNotifyValue(false, for: characteristic)
+        guard !discoveredPeripherals.isEmpty else { return }
+
+        for peripheral in discoveredPeripherals {
+            for service in (peripheral.services ?? [] as [CBService]) {
+                for characteristic in (service.characteristics ?? [] as [CBCharacteristic]) {
+
+                    if temperatureDeviceCharacteristics.contains(characteristic.uuid) {
+                        os_log("Found temperature charactistic on %@", peripheral)
+                    }
+
+                    //if characteristic.uuid == TransferService.characteristicUUID && characteristic.isNotifying {
+                        // It is notifying, so unsubscribe
+                        peripheral.setNotifyValue(false, for: characteristic)
+                    //}
                 }
             }
+
+            // If we've gotten this far, we're connected, but we're not subscribed, so we just disconnect
+            centralManager.cancelPeripheralConnection(peripheral)
         }
-        
-        // If we've gotten this far, we're connected, but we're not subscribed, so we just disconnect
-        centralManager.cancelPeripheralConnection(discoveredPeripheral)
     }
     
     /*
@@ -104,7 +138,7 @@ class CentralViewController: UIViewController {
      */
     private func writeData() {
     
-        guard let discoveredPeripheral = discoveredPeripheral,
+        guard let discoveredPeripheral = connectedPeripheral,
                 let transferCharacteristic = transferCharacteristic
             else { return }
         
@@ -201,20 +235,25 @@ extension CentralViewController: CBCentralManagerDelegate {
         // Change the minimum RSSI value depending on your app’s use case.
         guard RSSI.intValue >= -50
             else {
-                logit("Discovered perhiperal not in expected range, at \(RSSI.intValue)")
+                if !discoveredOutOfRangePeripherals.contains(peripheral) {
+                    discoveredOutOfRangePeripherals.append(peripheral)
+                    logit("Discovered \(peripheral.name ?? peripheral.identifier.uuidString)) not in expected range, at \(RSSI.intValue)")
+                }
+
                 return
         }
-        
-        logit("Discovered \(String(describing: peripheral.name)) at \(RSSI.intValue)")
-        
+
+        discoveredOutOfRangePeripherals.removeAll(where: { $0 == peripheral })
+
         // Device is in range - have we already seen it?
-        if discoveredPeripheral != peripheral {
+        if !discoveredPeripherals.contains(peripheral) {
+            logit("Discovered \(String(describing: peripheral.name ?? peripheral.identifier.uuidString)) at \(RSSI.intValue)")
             
             // Save a local copy of the peripheral, so CoreBluetooth doesn't get rid of it.
-            discoveredPeripheral = peripheral
+            discoveredPeripherals.append(peripheral)
             
             // And finally, connect to the peripheral.
-            logit("Connecting to perhiperal \(peripheral)")
+            logit(" + Connecting to perhiperal \(peripheral.name ?? peripheral.identifier.uuidString)")
             centralManager.connect(peripheral, options: nil)
         }
     }
@@ -223,7 +262,7 @@ extension CentralViewController: CBCentralManagerDelegate {
      *  If the connection fails for whatever reason, we need to deal with it.
      */
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        logit("Failed to connect to \(peripheral). String(describing: error)")
+        logit("Failed to connect to \(peripheral.name ?? peripheral.identifier.uuidString). \(String(describing: error))")
         cleanup()
     }
     
@@ -231,11 +270,11 @@ extension CentralViewController: CBCentralManagerDelegate {
      *  We've connected to the peripheral, now we need to discover the services and characteristics to find the 'transfer' characteristic.
      */
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        logit("Peripheral Connected")
+        logit("\(peripheral.name ?? peripheral.identifier.uuidString) Peripheral Connected")
         
         // Stop scanning
-        centralManager.stopScan()
-        logit("Scanning stopped")
+        //centralManager.stopScan()
+        //logit("Scanning stopped")
         
         // set iteration info
         connectionIterationsComplete += 1
@@ -248,15 +287,15 @@ extension CentralViewController: CBCentralManagerDelegate {
         peripheral.delegate = self
         
         // Search only for services that match our UUID
-        peripheral.discoverServices([TransferService.serviceUUID])
+        peripheral.discoverServices([]) //TransferService.serviceUUID
     }
     
     /*
      *  Once the disconnection happens, we need to clean up our local copy of the peripheral
      */
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        logit("Perhiperal Disconnected")
-        discoveredPeripheral = nil
+        logit("\(peripheral.name ?? peripheral.identifier.uuidString) Perhiperal Disconnected")
+        connectedPeripheral = nil
         
         // We're disconnected, so start scanning again
         if connectionIterationsComplete < defaultIterations {
@@ -276,9 +315,9 @@ extension CentralViewController: CBPeripheralDelegate {
      */
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
         
-        for service in invalidatedServices where service.uuid == TransferService.serviceUUID {
-            logit("Transfer service is invalidated - rediscover services")
-            peripheral.discoverServices([TransferService.serviceUUID])
+        for service in invalidatedServices { // where service.uuid == TransferService.serviceUUID
+            logit("\(service.debugDescription) service is invalidated - rediscover services")
+            peripheral.discoverServices([]) //TransferService.serviceUUID
         }
     }
 
@@ -297,7 +336,7 @@ extension CentralViewController: CBPeripheralDelegate {
         // Loop through the newly filled peripheral.services array, just in case there's more than one.
         guard let peripheralServices = peripheral.services else { return }
         for service in peripheralServices {
-            peripheral.discoverCharacteristics([TransferService.characteristicUUID], for: service)
+            peripheral.discoverCharacteristics([], for: service) //TransferService.characteristicUUID
         }
     }
     
@@ -315,7 +354,7 @@ extension CentralViewController: CBPeripheralDelegate {
         
         // Again, we loop through the array, just in case and check if it's the right one
         guard let serviceCharacteristics = service.characteristics else { return }
-        for characteristic in serviceCharacteristics where characteristic.uuid == TransferService.characteristicUUID {
+        for characteristic in serviceCharacteristics { // where characteristic.uuid == TransferService.characteristicUUID
             // If it is, subscribe to it
             transferCharacteristic = characteristic
             peripheral.setNotifyValue(true, for: characteristic)
@@ -363,19 +402,19 @@ extension CentralViewController: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         // Deal with errors (if any)
         if let error = error {
-            logit("Error changing notification state: \(error.localizedDescription)")
+            logit("\(peripheral.name ?? peripheral.identifier.uuidString) Error changing notification state: \(error.localizedDescription)")
             return
         }
         
         // Exit if it's not the transfer characteristic
-        guard characteristic.uuid == TransferService.characteristicUUID else { return }
+        //guard characteristic.uuid == TransferService.characteristicUUID else { return }
         
         if characteristic.isNotifying {
             // Notification has started
-            logit("Notification began on \(characteristic)")
+            logit("\(peripheral.name ?? peripheral.identifier.uuidString) Notification began on \(characteristic.uuid.uuidString)")
         } else {
             // Notification has stopped, so disconnect from the peripheral
-            logit("Notification stopped on \(characteristic). Disconnecting")
+            logit("\(peripheral.name ?? peripheral.identifier.uuidString) Notification stopped on \(characteristic.uuid.uuidString). Disconnecting")
             cleanup()
         }
         
