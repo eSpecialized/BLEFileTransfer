@@ -46,7 +46,7 @@ class CentralViewController: UIViewController {
 
     // MARK: - Helper Methods
 
-    func logit(_ logEntry: String) {
+    private func logit(_ logEntry: String) {
         let oldText = logView.text ?? ""
         logView.text = oldText + logEntry + "\n"
 

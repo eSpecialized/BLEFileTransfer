@@ -44,9 +44,9 @@ class PeripheralViewController: UIViewController {
         super.viewDidLoad()
 
         #if os(tvOS)
-        logView.text = "Not Supported on tvOS Yet"
+        logView.text = "Not Supported on tvOS Yet\n"
         #else
-        logView.text = "Starting up"
+        logView.text = "Starting up\n"
         #endif
     }
     
@@ -84,7 +84,7 @@ class PeripheralViewController: UIViewController {
 
     // MARK: - Helper Methods
 
-    func logit(_ logEntry: String) {
+    private func logit(_ logEntry: String) {
         let oldText = logView.text ?? ""
         logView.text = oldText + logEntry + "\n"
         

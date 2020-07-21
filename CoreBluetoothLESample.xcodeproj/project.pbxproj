@@ -14,6 +14,7 @@
 		012C307A226FD27600BADEF9 /* CentralViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C3079226FD27600BADEF9 /* CentralViewController.swift */; };
 		012C307C226FD28C00BADEF9 /* PeripheralViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C307B226FD28C00BADEF9 /* PeripheralViewController.swift */; };
 		012C307E226FD59500BADEF9 /* TransferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C307D226FD59500BADEF9 /* TransferService.swift */; };
+		3502ADEE24C74F25004A4574 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 012C306E226FD13B00BADEF9 /* Assets.xcassets */; };
 		35209C9524C24B9F006C3801 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 35209C9324C24B9F006C3801 /* LaunchScreen.storyboard */; };
 		35209CA024C24BA0006C3801 /* TVOS_BLETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35209C9F24C24BA0006C3801 /* TVOS_BLETests.swift */; };
 		35209CA824C24C05006C3801 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C3067226FD13B00BADEF9 /* AppDelegate.swift */; };
@@ -21,6 +22,7 @@
 		35209CAA24C24C0B006C3801 /* CentralViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C3079226FD27600BADEF9 /* CentralViewController.swift */; };
 		35209CAB24C24C12006C3801 /* PeripheralViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C307B226FD28C00BADEF9 /* PeripheralViewController.swift */; };
 		35209CAD24C24C30006C3801 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 35209C8E24C24B9E006C3801 /* Main.storyboard */; };
+		354A722024C74C6E00906C1D /* APPREADME.md in Resources */ = {isa = PBXBuildFile; fileRef = 354A721F24C74C6E00906C1D /* APPREADME.md */; };
 		A9A7C756227E1D6200F2CC59 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = A9A7C755227E1D6200F2CC59 /* README.md */; };
 /* End PBXBuildFile section */
 
@@ -45,15 +47,13 @@
 		012C307B226FD28C00BADEF9 /* PeripheralViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeripheralViewController.swift; sourceTree = "<group>"; };
 		012C307D226FD59500BADEF9 /* TransferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferService.swift; sourceTree = "<group>"; };
 		35209C8824C24B9D006C3801 /* TVOS_BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TVOS_BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		35209C8A24C24B9E006C3801 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		35209C8C24C24B9E006C3801 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		35209C8F24C24B9E006C3801 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		35209C9124C24B9F006C3801 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		35209C9424C24B9F006C3801 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		35209C9624C24B9F006C3801 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		35209C9B24C24B9F006C3801 /* TVOS_BLETests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TVOS_BLETests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		35209C9F24C24BA0006C3801 /* TVOS_BLETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVOS_BLETests.swift; sourceTree = "<group>"; };
 		35209CA124C24BA0006C3801 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		354A721F24C74C6E00906C1D /* APPREADME.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = APPREADME.md; sourceTree = "<group>"; };
 		53F76A1B5D2A119C156B3CA9 /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		940DB595832554E780C12D56 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
 		A9A7C755227E1D6200F2CC59 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -88,6 +88,7 @@
 		012C305B226FD13B00BADEF9 = {
 			isa = PBXGroup;
 			children = (
+				354A721F24C74C6E00906C1D /* APPREADME.md */,
 				A9A7C755227E1D6200F2CC59 /* README.md */,
 				012C3066226FD13B00BADEF9 /* CoreBluetoothLESample */,
 				35209C8924C24B9E006C3801 /* TVOS_BLE */,
@@ -127,10 +128,7 @@
 		35209C8924C24B9E006C3801 /* TVOS_BLE */ = {
 			isa = PBXGroup;
 			children = (
-				35209C8A24C24B9E006C3801 /* AppDelegate.swift */,
-				35209C8C24C24B9E006C3801 /* ViewController.swift */,
 				35209C8E24C24B9E006C3801 /* Main.storyboard */,
-				35209C9124C24B9F006C3801 /* Assets.xcassets */,
 				35209C9324C24B9F006C3801 /* LaunchScreen.storyboard */,
 				35209C9624C24B9F006C3801 /* Info.plist */,
 			);
@@ -277,6 +275,7 @@
 				012C3072226FD13B00BADEF9 /* LaunchScreen.storyboard in Resources */,
 				012C306F226FD13B00BADEF9 /* Assets.xcassets in Resources */,
 				A9A7C756227E1D6200F2CC59 /* README.md in Resources */,
+				354A722024C74C6E00906C1D /* APPREADME.md in Resources */,
 				012C306D226FD13B00BADEF9 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -286,6 +285,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				35209C9524C24B9F006C3801 /* LaunchScreen.storyboard in Resources */,
+				3502ADEE24C74F25004A4574 /* Assets.xcassets in Resources */,
 				35209CAD24C24C30006C3801 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
