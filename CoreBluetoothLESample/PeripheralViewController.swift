@@ -24,6 +24,7 @@ class PeripheralViewController: UIViewController {
     @IBOutlet var advertisingButton: UIButton!
     #else
     @IBOutlet var advertisingSwitch: UISwitch!
+    @IBOutlet var allowsEditPhotoSwitch: UISwitch!
     #endif
     @IBOutlet weak var uploadButton: UIButton!
 
@@ -38,14 +39,6 @@ class PeripheralViewController: UIViewController {
     // MARK: - View Lifecycle
     
     override func viewDidLoad() {
-        #if os(tvOS)
-        peripheralManager = CBPeripheralManager()
-        peripheralManager.delegate = self
-        #else
-        peripheralManager = CBPeripheralManager(delegate: self, queue: nil, options: [CBPeripheralManagerOptionShowPowerAlertKey: true])
-        peripheralManager.delegate = self
-        #endif
-
         super.viewDidLoad()
 
         #if os(tvOS)
@@ -53,6 +46,18 @@ class PeripheralViewController: UIViewController {
         #else
         logView.text = "Starting up\n Once you have typed text, or selected a photo to upload, begin advertising.\n"
         progressView.isHidden = true
+        #endif
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        #if os(tvOS)
+        peripheralManager = CBPeripheralManager()
+        peripheralManager.delegate = self
+        #else
+        peripheralManager = CBPeripheralManager(delegate: self, queue: .global(qos: .userInitiated), options: [CBPeripheralManagerOptionShowPowerAlertKey: true])
+        peripheralManager.delegate = self
         #endif
     }
     
@@ -95,7 +100,7 @@ class PeripheralViewController: UIViewController {
             let imagePickerController = UIImagePickerController()
             imagePickerController.delegate = self
             imagePickerController.mediaTypes = ["public.image"]
-            imagePickerController.allowsEditing = true
+            imagePickerController.allowsEditing = allowsEditPhotoSwitch.isOn
             imagePickerController.sourceType = .photoLibrary
 
             navigationController?.present(imagePickerController, animated: true, completion: {
@@ -108,12 +113,16 @@ class PeripheralViewController: UIViewController {
     // MARK: - Helper Methods
 
     private func logit(_ logEntry: String) {
-        let oldText = logView.text ?? ""
-        logView.text = oldText + logEntry + "\n"
-        
-        //scroll to the bottom of the view
-        let bottom = NSMakeRange(logView.text.count - 1, 1)
-        logView.scrollRangeToVisible(bottom)
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else { return }
+
+            let oldText = strongSelf.logView.text ?? ""
+            strongSelf.logView.text = oldText + logEntry + "\n"
+
+            //scroll to the bottom of the view
+            let bottom = NSMakeRange(strongSelf.logView.text.count - 1, 1)
+            strongSelf.logView.scrollRangeToVisible(bottom)
+        }
 
         print(logit)
     }
@@ -182,8 +191,12 @@ class PeripheralViewController: UIViewController {
                 return
             }
 
-            let totalPercent = Float(sendDataIndex) / Float(dataToSend.count)
-            progressView.progress = totalPercent
+            DispatchQueue.main.async { [weak self] in
+                guard let strongSelf = self else { return }
+
+                let totalPercent = Float(strongSelf.sendDataIndex) / Float(strongSelf.dataToSend.count)
+                strongSelf.progressView.progress = totalPercent
+            }
 
             // It did send, so update our index
             sendDataIndex += amountToSend
@@ -353,9 +366,13 @@ extension PeripheralViewController: CBPeripheralManagerDelegate {
         //stop advertising if we were already advertising.
         peripheralManager.stopAdvertising()
         #if os(iOS)
-            if advertisingSwitch.isOn {
-                advertisingSwitch.setOn(false, animated: true)
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else { return }
+
+            if strongSelf.advertisingSwitch.isOn {
+                strongSelf.advertisingSwitch.setOn(false, animated: true)
             }
+        }
         #endif
         
         // Start sending
@@ -455,6 +472,11 @@ extension PeripheralViewController: UIImagePickerControllerDelegate, UINavigatio
 
         let fileName = fileURL.lastPathComponent
         pickerDidSelect(image: image, fileName: fileName)
+
+        //instantiate advertising and uploading
+        if !advertisingSwitch.isOn {
+            switchChanged(self)
+        }
     }
 }
 #endif

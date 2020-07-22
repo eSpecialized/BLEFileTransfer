@@ -28,13 +28,15 @@ class CentralViewController: UIViewController {
     var connectionIterationsComplete = 0
     
     let defaultIterations = 5     // change this value based on test usecase
+
+    var imageController: ImageDisplayViewController!
     
     var data = Data()
 
     // MARK: - view lifecycle
     
     override func viewDidLoad() {
-        centralManager = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: true])
+        centralManager = CBCentralManager(delegate: self, queue: .global(qos: .userInitiated), options: [CBCentralManagerOptionShowPowerAlertKey: true])
         super.viewDidLoad()
         logView.text = "starting up\n"
     }
@@ -52,12 +54,16 @@ class CentralViewController: UIViewController {
     // MARK: - Helper Methods
 
     private func logit(_ logEntry: String) {
-        let oldText = logView.text ?? ""
-        logView.text = oldText + logEntry + "\n"
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else { return }
 
-        //scroll to the bottom of the view
-        let bottom = NSMakeRange(logView.text.count - 1, 1)
-        logView.scrollRangeToVisible(bottom)
+            let oldText = strongSelf.logView.text ?? ""
+            strongSelf.logView.text = oldText + logEntry + "\n"
+
+            //scroll to the bottom of the view
+            let bottom = NSMakeRange(strongSelf.logView.text.count - 1, 1)
+            strongSelf.logView.scrollRangeToVisible(bottom)
+        }
     }
 
     /*
@@ -271,6 +277,12 @@ extension CentralViewController: CBCentralManagerDelegate {
         }
     }
 
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if let destination = segue.destination as? ImageDisplayViewController {
+            destination.image = imageView.image
+            imageController = destination
+        }
+    }
 }
 
 extension CentralViewController: CBPeripheralDelegate {
@@ -371,8 +383,12 @@ extension CentralViewController: CBPeripheralDelegate {
             // Otherwise, just append the data to what we have previously received.
             data.append(characteristicData)
 
-            let percentage = Float(data.count) / Float(expectedBytes)
-            progressView.progress = percentage
+            DispatchQueue.main.async { [weak self] in
+                guard let strongSelf = self else { return }
+
+                let percentage = Float(strongSelf.data.count) / Float(strongSelf.expectedBytes)
+                strongSelf.progressView.progress = percentage
+            }
         }
     }
 
@@ -408,7 +424,6 @@ extension CentralViewController: CBPeripheralDelegate {
         writeData()
     }
 
-
     func processData() {
         if !fileName.isEmpty {
             let image = UIImage(data: data)
@@ -418,6 +433,12 @@ extension CentralViewController: CBPeripheralDelegate {
             if imageView != nil {
                 imageView.isHidden = false
                 imageView.image = image
+
+                if imageController == nil {
+                    performSegue(withIdentifier: "showImageView", sender: self)
+                } else {
+                    imageController.imageView.image = image
+                }
             }
 
             //reset for next set of data etc.
@@ -457,7 +478,9 @@ extension CentralViewController: CBPeripheralDelegate {
                     expectedBytes = Int(newString2) ?? 0
                     logit("[\(expectedBytes) bytes expected]")
 
-                    progressView.isHidden = false
+                    DispatchQueue.main.async { [weak self] in
+                        self?.progressView.isHidden = false
+                    }
                 }
 
             } catch {

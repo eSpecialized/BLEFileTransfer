@@ -15,6 +15,8 @@
 		012C307C226FD28C00BADEF9 /* PeripheralViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C307B226FD28C00BADEF9 /* PeripheralViewController.swift */; };
 		012C307E226FD59500BADEF9 /* TransferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C307D226FD59500BADEF9 /* TransferService.swift */; };
 		3502ADEE24C74F25004A4574 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 012C306E226FD13B00BADEF9 /* Assets.xcassets */; };
+		3502ADF324C7B7DA004A4574 /* ImageDisplayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3502ADF224C7B7DA004A4574 /* ImageDisplayViewController.swift */; };
+		3502ADF424C7B7DA004A4574 /* ImageDisplayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3502ADF224C7B7DA004A4574 /* ImageDisplayViewController.swift */; };
 		35209C9524C24B9F006C3801 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 35209C9324C24B9F006C3801 /* LaunchScreen.storyboard */; };
 		35209CA024C24BA0006C3801 /* TVOS_BLETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35209C9F24C24BA0006C3801 /* TVOS_BLETests.swift */; };
 		35209CA824C24C05006C3801 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012C3067226FD13B00BADEF9 /* AppDelegate.swift */; };
@@ -46,6 +48,7 @@
 		012C3079226FD27600BADEF9 /* CentralViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CentralViewController.swift; sourceTree = "<group>"; };
 		012C307B226FD28C00BADEF9 /* PeripheralViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeripheralViewController.swift; sourceTree = "<group>"; };
 		012C307D226FD59500BADEF9 /* TransferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferService.swift; sourceTree = "<group>"; };
+		3502ADF224C7B7DA004A4574 /* ImageDisplayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDisplayViewController.swift; sourceTree = "<group>"; };
 		35209C8824C24B9D006C3801 /* TVOS_BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TVOS_BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		35209C8F24C24B9E006C3801 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		35209C9424C24B9F006C3801 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -117,6 +120,7 @@
 				012C307D226FD59500BADEF9 /* TransferService.swift */,
 				012C3079226FD27600BADEF9 /* CentralViewController.swift */,
 				012C307B226FD28C00BADEF9 /* PeripheralViewController.swift */,
+				3502ADF224C7B7DA004A4574 /* ImageDisplayViewController.swift */,
 				012C306B226FD13B00BADEF9 /* Main.storyboard */,
 				012C306E226FD13B00BADEF9 /* Assets.xcassets */,
 				012C3070226FD13B00BADEF9 /* LaunchScreen.storyboard */,
@@ -306,6 +310,7 @@
 			files = (
 				012C307E226FD59500BADEF9 /* TransferService.swift in Sources */,
 				012C307A226FD27600BADEF9 /* CentralViewController.swift in Sources */,
+				3502ADF324C7B7DA004A4574 /* ImageDisplayViewController.swift in Sources */,
 				012C3068226FD13B00BADEF9 /* AppDelegate.swift in Sources */,
 				012C307C226FD28C00BADEF9 /* PeripheralViewController.swift in Sources */,
 			);
@@ -317,6 +322,7 @@
 			files = (
 				35209CAB24C24C12006C3801 /* PeripheralViewController.swift in Sources */,
 				35209CA924C24C08006C3801 /* TransferService.swift in Sources */,
+				3502ADF424C7B7DA004A4574 /* ImageDisplayViewController.swift in Sources */,
 				35209CAA24C24C0B006C3801 /* CentralViewController.swift in Sources */,
 				35209CA824C24C05006C3801 /* AppDelegate.swift in Sources */,
 			);
